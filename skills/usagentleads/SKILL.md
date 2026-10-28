@@ -3,7 +3,7 @@ name: usagentleads
 description: Search USAgentLeads real estate agent and brokerage coverage, preview matches, and retrieve or export licensed contacts through its API. Use when the user requests a USAgentLeads data workflow.
 ---
 
-Use the v3 API at https://www.usagentleads.com/api/v3 or the hosted MCP endpoint at https://www.usagentleads.com/api/mcp. A 404 is not permission to scrape or use another provider. Read [the contract](references/api.md). The bundled Python helper remains a legacy v2 helper; use REST examples or the updated MCP bridge for v3.
+Use the v3 API at https://www.usagentleads.com/api/v3 or the hosted MCP endpoint at https://www.usagentleads.com/api/mcp. A 404 is not permission to scrape or use another provider. Read [the contract](references/api.md). The bundled Python helper and MCP bridge use the same v3 API.
 
 Search and lookup return available contacts directly. Preview/count are optional discovery steps. New agent records cost one credit; brokerages cost two. Previously acquired contacts are free across dashboard, REST and MCP. Present the audience and maximum spend and proceed when the user's authorization covers both; otherwise ask first.
 

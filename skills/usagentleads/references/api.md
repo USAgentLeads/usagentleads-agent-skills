@@ -13,8 +13,8 @@ GET /coverage and /locations are public. GET /account and /usage require an API 
 
 Filters match the dashboard: state, countyFips, city (requires state), zip, mustHave (email/phone/address/license/fullAddress), organization; activeLicense for agents and orgType for brokerages. No sales-volume, fuzzy-name or live-license enrichment is supported.
 
-All operations are rate-limited. Authenticated REST v2/v3 and hosted MCP share 60 requests/minute/account. Growth has 10k and Pro 100k successful/in-flight requests per UTC month. On 429 respect Retry-After. Five concurrent v3 searches; five export creation requests/minute and two queued exports/account.
+All operations are rate-limited. Authenticated REST v3 and hosted MCP share 60 requests/minute/account. Growth has 10k and Pro 100k successful/in-flight requests per UTC month. On 429 respect Retry-After. Five concurrent v3 searches; five export creation requests/minute and two queued exports/account.
 
 Suppressions apply before acquisition and again on recovery/download. Keep location_source attribution. Format checks do not guarantee reachability, deliverability, mobile status or permission to contact.
 
-The bundled Python client remains a legacy v2 helper. For v3 use the REST examples or updated MCP bridge. Legacy v2 unlock stays Pro-only; its workflow is documented separately.
+The bundled Python client supports v3 discovery, search, lookup, recovery and exports. Billable request calls require confirmed=True, a saved idempotency_key and max_credits; all validation happens before network access.

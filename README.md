@@ -2,11 +2,9 @@
 
 Official USAgentLeads developer resources. Documentation: https://www.usagentleads.com/docs.
 
-**Release status:** API v2 and hosted MCP are implemented for the next application release. The application deployment is intentionally pending UI review. Public documentation and clients do not imply that those endpoints are already live. Existing one-time purchases and legacy v1 access continue unchanged.
+API v3 and hosted MCP are available to Growth and Pro accounts. Never commit an API key or real contact data. Use synthetic records in examples and tests.
 
-Never commit an API key or real contact data. Use synthetic records in examples and tests. API access requires Growth (read) or Pro (read, unlock, MCP). Legacy Pro API retains v1 access and gains v2 read access.
-
-Search and masked previews spend no record credits. One agent unlock costs one credit; a brokerage costs two. Unlocks share the dashboard balance. Reuse the same UUID idempotency key and identical payload after a timeout. Do not create another key until the prior outcome is resolved.
+Count and previews spend no record credits. Search and lookup return contacts directly and spend one credit per new agent or two per new brokerage. Existing ownership is free. Reuse the same UUID request key and payload after a timeout; recover the prior outcome before starting another request.
 
 Licensed under MIT. This license covers client code and documentation, not the licensed contact dataset.
 

@@ -1,9 +1,11 @@
-"""Standard-library USAgentLeads API client. Never logs credentials or follows redirects."""
+"""Standard-library API v3 client with explicit spend approval and no redirects."""
 import json
 import os
+import re
 import urllib.request
-import urllib.error
 from urllib.parse import urlparse, urlencode
+
+UUID = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -20,23 +22,51 @@ class Client:
             raise ValueError("HTTPS is required except for local testing")
         self.opener = urllib.request.build_opener(NoRedirect)
 
-    def request(self, path, data=None, query=None, raw=False):
-        if path not in ("coverage", "search/count", "search/preview", "records/unlock", "records", "credits", "exports"):
+    def request(self, path, data=None, query=None, raw=False, *, idempotency_key=None, confirmed=False):
+        audience = re.fullmatch(r"(agents|brokerages)/(count|preview|search|lookup)", path)
+        export = re.fullmatch(r"exports/(" + UUID + r")(/download|/cancel)?", path)
+        recovery = re.fullmatch(r"requests/" + UUID, path)
+        if not (audience or export or recovery or path in ("coverage", "locations", "account", "usage", "exports")):
             raise ValueError("Unknown API endpoint")
-        if path != "coverage" and not self.api_key:
+        public = path in ("coverage", "locations")
+        if not public and not self.api_key:
             raise ValueError("Set USAGENTLEADS_API_KEY")
-        url = self.base_url + "/api/v2/" + path
-        if query: url += "?" + urlencode(query)
+        billable = path == "exports" or bool(audience and audience[2] in ("search", "lookup"))
+        if billable:
+            if confirmed is not True:
+                raise ValueError("Confirm the selection and max_credits before spending")
+            if not isinstance(idempotency_key, str) or not re.fullmatch(UUID, idempotency_key):
+                raise ValueError("Provide a saved UUID idempotency_key")
+            cap = data.get("max_credits") if isinstance(data, dict) else None
+            if type(cap) is not int or not 0 <= cap <= (10000 if path == "exports" else 200):
+                raise ValueError("Provide a valid max_credits cap")
+        method = "POST" if audience or path == "exports" or (export and export[2] == "/cancel") else "GET"
+        if method == "GET" and data is not None:
+            raise ValueError("This endpoint does not accept a body")
+        if query and (path != "locations" or set(query) - {"kind", "q", "state"}):
+            raise ValueError("Only locations accepts kind, q and state query parameters")
+        url = self.base_url + "/api/v3/" + path
+        if query:
+            url += "?" + urlencode(query)
         headers = {"Accept": "text/csv" if raw else "application/json"}
-        if self.api_key: headers["Authorization"] = "Bearer " + self.api_key
-        if data is not None: headers["Content-Type"] = "application/json"
-        req = urllib.request.Request(url, data=json.dumps(data).encode() if data is not None else None, headers=headers)
+        if self.api_key:
+            headers["Authorization"] = "Bearer " + self.api_key
+        if billable:
+            headers["Idempotency-Key"] = idempotency_key
+        payload = None
+        if method == "POST":
+            headers["Content-Type"] = "application/json"
+            payload = json.dumps(data if data is not None else {}).encode()
+        req = urllib.request.Request(url, data=payload, headers=headers, method=method)
         with self.opener.open(req, timeout=60) as response:
             content = response.read()
             return content if raw else json.loads(content)
 
-    def unlock(self, payload, confirmed=False):
-        if confirmed is not True: raise ValueError("Confirm the selection and maximum spend before unlocking")
-        if not payload.get("idempotencyKey") or not isinstance(payload.get("maxCredits"), int) or payload["maxCredits"] < 1:
-            raise ValueError("Provide a UUID idempotencyKey and positive maxCredits")
-        return self.request("records/unlock", data=payload)
+    def search(self, kind, payload, *, idempotency_key, confirmed=False):
+        return self.request(kind + "/search", data=payload, idempotency_key=idempotency_key, confirmed=confirmed)
+
+    def lookup(self, kind, payload, *, idempotency_key, confirmed=False):
+        return self.request(kind + "/lookup", data=payload, idempotency_key=idempotency_key, confirmed=confirmed)
+
+    def create_export(self, payload, *, idempotency_key, confirmed=False):
+        return self.request("exports", data=payload, idempotency_key=idempotency_key, confirmed=confirmed)
